@@ -50,9 +50,9 @@ def root():
         "slack_name": "Sevenwings",
         "github_repo": "https://github.com/Sevenwings26/HNG_Stage1-Data-Persistence-API-Design-Assessment.git",
         
-        "usage": "https://hng-stage0-api-integration-data-pro.vercel.app/api/classify?name=john",
         
-        "documentation": "https://hng-stage0-api-integration-data-pro.vercel.app/docs",
+        "usage": "https://hng-stage1-data-persistence-api-des-swart.vercel.app",
+        "documentation": "https://hng-stage1-data-persistence-api-des-swart.vercel.app/docs",
     }
 
 
