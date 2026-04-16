@@ -58,20 +58,19 @@ def root():
 
 
 # POST /api/profiles
-# @app.post("/api/profiles", response_model=ProfileResponse, status_code=201)
 @app.post("/api/profiles", status_code=201)
 async def create_profile(
     paylaod: ProfileRequest,
     db: Session = Depends(get_db)
 ):
     name = paylaod.name
-    # 1. Validation
+    # 1. Validation - if not empty
     if not name or name.strip() == "":
         raise HTTPException(status_code=400, detail="Missing or empty name")
 
     normalized_name = name.strip().lower()
 
-    # 2. Idempotency check
+    # 2. Idempotency check... To avoid duplicate of same data
     existing = db.query(Profile).filter(
         func.lower(Profile.name) == normalized_name
     ).first()
@@ -93,6 +92,7 @@ async def create_profile(
             gender_task, age_task, country_task
         )
 
+    # collect data 
     gen_data = gender_res.json()
     age_data = age_res.json()
     nat_data = country_res.json()

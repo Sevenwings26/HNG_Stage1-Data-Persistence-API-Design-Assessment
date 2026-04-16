@@ -51,7 +51,8 @@ A production-ready FastAPI service that aggregates demographic data from three e
 
 1.  **Clone & Install**:
     ```bash
-    git clone <repo-url>
+    git clone https://github.com/Sevenwings26/HNG_Stage1-Data-Persistence-API-Design-Assessment/tree/main
+
     pip install -r requirements.txt
     ```
 
@@ -83,3 +84,6 @@ In your repository, make sure you include a `vercel.json` and a `requirements.tx
 * `httpx`
 * `uuid-utils`
 * `python-dotenv`
+
+
+
