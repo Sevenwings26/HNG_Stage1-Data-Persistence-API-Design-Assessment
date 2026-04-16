@@ -1,0 +1,8 @@
+ 
+.venv/
+task1.md/
+.env
+
+alembic/
+
+alembic.ini
