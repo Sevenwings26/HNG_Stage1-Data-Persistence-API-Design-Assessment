@@ -2,6 +2,10 @@ from pydantic import BaseModel
 from datetime import datetime
 
 
+
+class ProfileRequest(BaseModel):
+    name: str
+
 class ProfileResponse(BaseModel):
     id: str
     name: str

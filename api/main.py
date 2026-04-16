@@ -6,6 +6,7 @@ from sqlalchemy import func
 import httpx
 from contextlib import asynccontextmanager
 from .database import get_db, Profile
+from .schema import ProfileResponse, ProfileRequest
 
 
 # Performance Hack: Use a Lifespan to keep one connection open
@@ -60,9 +61,10 @@ def root():
 # @app.post("/api/profiles", response_model=ProfileResponse, status_code=201)
 @app.post("/api/profiles", status_code=201)
 async def create_profile(
-    name: str = Query(...),
+    paylaod: ProfileRequest,
     db: Session = Depends(get_db)
 ):
+    name = paylaod.name
     # 1. Validation
     if not name or name.strip() == "":
         raise HTTPException(status_code=400, detail="Missing or empty name")
@@ -138,6 +140,19 @@ async def create_profile(
 # -----------------------------
 # GET /api/profiles/{id}
 # -----------------------------
+# @app.get("/api/profiles/{id}")
+# def get_profile(id: str, db: Session = Depends(get_db)):
+#     profile = db.query(Profile).filter(Profile.id == id).first()
+
+#     if not profile:
+#         raise HTTPException(status_code=404, detail="Profile not found")
+
+#     return {
+#         "status": "success",
+#         "data": profile
+#     }
+
+
 @app.get("/api/profiles/{id}")
 def get_profile(id: str, db: Session = Depends(get_db)):
     profile = db.query(Profile).filter(Profile.id == id).first()
@@ -147,9 +162,8 @@ def get_profile(id: str, db: Session = Depends(get_db)):
 
     return {
         "status": "success",
-        "data": profile
+        "data": ProfileResponse.model_validate(profile)
     }
-
 
 # -----------------------------
 # GET /api/profiles
