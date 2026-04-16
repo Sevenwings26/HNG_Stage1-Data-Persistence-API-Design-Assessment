@@ -9,7 +9,7 @@ load_dotenv()
 
 raw_url = os.getenv('DATABASE_URL')
 
-# 2. Fix the 'postgres://' vs 'postgresql://' issue automatically
+# 2. Fix the 'postgres://' vs 'postgresql://' issue
 if raw_url and raw_url.startswith("postgres://"):
     DATABASE_URL = raw_url.replace("postgres://", "postgresql://", 1)
 else:

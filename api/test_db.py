@@ -1,12 +1,10 @@
 import psycopg2
+from dotenv import load_dotenv
+
+load_dotenv()
 
 try:
-    # conn = psycopg2.connect(
-    #     "postgres://pxxluser_mo07q8a70c301f8:12729ccb617e7d664b1bd9fd06329c4038f180339d655f2f065bc99b4373b6d3@db.pxxl.pro:47076/pxxldb_mo07q8a7dccd09a"
-    # )
-    conn = psycopg2.connect(
-        "postgresql://identity_db_weay_user:ZLBSeNhErnSqAtKj3gQCxFv2eEoytwrh@dpg-d7gd7cvaqgkc73eqst00-a.frankfurt-postgres.render.com/identity_db_weay"
-    )
+    conn = psycopg2.connect("DATABASE_URL")
     print("Connection successful!")
     conn.close()
 except Exception as e:
