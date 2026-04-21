@@ -1,6 +1,7 @@
  
 .venv/
 task1.md/
+task2.md/
 .env
 
 alembic/

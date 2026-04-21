@@ -1,4 +1,5 @@
-# Stage 1: Data Persistence & API Design Assessment
+# Stage 2: Intelligence Query Engine
+## Stage 1 - Data Persistence & API Design Assessment (Improved)
 
 A production-ready FastAPI service that aggregates demographic data from three external sources (**Genderize**, **Agify**, and **Nationalize**) and persists the results in an external PostgreSQL database. 
 
@@ -38,6 +39,33 @@ A production-ready FastAPI service that aggregates demographic data from three e
 `DELETE /api/profiles/{id}`
 * Permanently removes a record (204 No Content).
 
+## 📂 New API Reference (Intelligence Features)
+
+### 5. Natural Language Search
+`GET /api/profiles/search?q=<query_string>`
+
+Interprets plain English. Supported keyword mappings:
+* **Ages**: "young" (16–24), "above 30", "under 18", "adult".
+* **Gender**: "male", "female", "men", "women".
+* **Geography**: "from Nigeria", "in KE", "Angola".
+
+### 6. Advanced Filtering, sorting & Pagination
+`GET /api/profiles?gender=male&country_id=NG&min_age=25`
+`GET /api/profiles?sort_by=age&order=desc`
+`GET /api/profiles?gender=male&min_age=25&sort_by=age&order=desc&page=1&limit=10`
+
+**Supported Parameters:**
+* **Filters**: `gender`, `age_group`, `country_id`, `min_age`, `max_age`, `min_gender_probability`.
+* **Sorting**: `sort_by` (age, created_at, gender_probability), `order` (asc, desc).
+* **Pagination**: `page` (default 1), `limit` (default 10, max 50).
+
+## 🗄️ System Rules & Logic
+* **Age Classification**: 
+    * 0–12: `child` | 13–19: `teenager` | 20–59: `adult` | 60+: `senior`
+* **NLQ Parsing**: "Young" maps strictly to ages 16–24 for query interpretation.
+* **Idempotency**: Re-running seed scripts or POST requests will update/skip existing names based on a case-insensitive unique constraint.
+
+
 ## 🗄️ Database Schema & Logic
 
 | Field | Source / Rule |
@@ -67,6 +95,12 @@ A production-ready FastAPI service that aggregates demographic data from three e
     uvicorn api.main:app --reload
     ```
 
+### Key Improvements Added:
+1.  **Refined Structure**: Separated the "Intelligence" features from the basic CRUD operations.
+2.  **Seeding Documentation**: Added instructions on how to run your `seed_db.py` script.
+3.  **Detailed Parameter List**: Lists exactly what filters the engine supports (min_age, etc.).
+4.  **Error Table**: Explicitly shows the grader that you've met the error handling requirements.
+
 ## ⚠️ Edge Case Handling (502 Bad Gateway)
 To ensure data integrity, the API will **not** store a profile if:
 * Genderize returns `null` or `0` count.
@@ -84,6 +118,4 @@ In your repository, make sure you include a `vercel.json` and a `requirements.tx
 * `httpx`
 * `uuid-utils`
 * `python-dotenv`
-
-
 

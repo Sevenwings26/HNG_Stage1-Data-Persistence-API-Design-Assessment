@@ -1,12 +1,16 @@
+import re
 import asyncio
+import httpx
 from fastapi import FastAPI, Query, Depends, HTTPException
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-import httpx
 from contextlib import asynccontextmanager
-from .database import get_db, Profile
-from .schema import ProfileResponse, ProfileRequest
+from database import get_db, Profile
+from schema import ProfileResponse, ProfileRequest
+from fastapi import Query
+from sqlalchemy import desc, asc
 
 
 # Performance Hack: Use a Lifespan to keep one connection open
@@ -20,7 +24,6 @@ async def lifespan(app: FastAPI):
 
 # initialize app 
 app = FastAPI(lifespan=lifespan)
-
 
 # CORS setup
 app.add_middleware(
@@ -42,7 +45,9 @@ def classify_age_group(age: int) -> str:
     return "senior"
 
 
-# GET
+# -----------------------------
+# GET /
+# -----------------------------
 @app.get('/')
 def root():
     return {
@@ -51,13 +56,14 @@ def root():
         "slack_name": "Sevenwings",
         "github_repo": "https://github.com/Sevenwings26/HNG_Stage1-Data-Persistence-API-Design-Assessment.git",
         
-        
         "usage": "https://hng-stage1-data-persistence-api-des-swart.vercel.app",
         "documentation": "https://hng-stage1-data-persistence-api-des-swart.vercel.app/docs",
     }
 
 
+# -----------------------------
 # POST /api/profiles
+# -----------------------------
 @app.post("/api/profiles", status_code=201)
 async def create_profile(
     paylaod: ProfileRequest,
@@ -138,21 +144,181 @@ async def create_profile(
 
 
 # -----------------------------
-# GET /api/profiles/{id}
+# GET /api/profiles
 # -----------------------------
-# @app.get("/api/profiles/{id}")
-# def get_profile(id: str, db: Session = Depends(get_db)):
-#     profile = db.query(Profile).filter(Profile.id == id).first()
+@app.get("/api/profiles")
+def list_profiles(
+    # Filters
+    gender: str | None = None,
+    country_id: str | None = None,
+    age_group: str | None = None,
+    min_age: int | None = None,
+    max_age: int | None = None,
+    min_gender_probability: float | None = None,
+    min_country_probability: float | None = None,
+    # Sorting & Pagination
+    sort_by: str = "created_at",
+    order: str = "desc",
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=50),
+    db: Session = Depends(get_db)
+):
+    query = db.query(Profile)
 
-#     if not profile:
-#         raise HTTPException(status_code=404, detail="Profile not found")
+    # 1. Advanced Filtering Logic
+    if gender:
+        query = query.filter(func.lower(Profile.gender) == gender.lower())
+    if country_id:
+        query = query.filter(func.lower(Profile.country_id) == country_id.lower())
+    if age_group:
+        query = query.filter(func.lower(Profile.age_group) == age_group.lower())
+    
+    # Range Filters (The "Intelligence" part)
+    if min_age is not None:
+        query = query.filter(Profile.age >= min_age)
+    if max_age is not None:
+        query = query.filter(Profile.age <= max_age)
+    if min_gender_probability is not None:
+        query = query.filter(Profile.gender_probability >= min_gender_probability)
+    if min_country_probability is not None:
+        query = query.filter(Profile.country_probability >= min_country_probability)
 
-#     return {
-#         "status": "success",
-#         "data": profile
-#     }
+    # 2. Sorting Logic
+    # Map the user input string to the actual Database Columns
+    allowed_sort_columns = {
+        "age": Profile.age,
+        "created_at": Profile.created_at,
+        "gender_probability": Profile.gender_probability
+    }
+    
+    target_column = allowed_sort_columns.get(sort_by, Profile.created_at)
+    
+    if order.lower() == "asc":
+        query = query.order_by(asc(target_column))
+    else:
+        query = query.order_by(desc(target_column))
+
+    # 3. Pagination Logic
+    total_records = query.count()
+    skip = (page - 1) * limit
+    results = query.offset(skip).limit(limit).all()
+
+    return {
+        "status": "success",
+        "page": page,
+        "limit": limit,
+        "total": total_records,
+        # "data": results,
+        "data": [ProfileResponse.model_validate(p) for p in results]
+        # "data": [ProfileResponse.model_validate(p) for p in results]
+
+    }
 
 
+# -----------------------------
+# GET /api/profiles/search
+# -----------------------------
+# Mapping for common countries in the seed data
+COUNTRY_MAP = {
+    "nigeria": "NG",
+    "kenya": "KE",
+    "angola": "AO",
+    "tanzania": "TZ",
+    "ghana": "GH",
+    "uganda": "UG"
+}
+
+@app.get("/api/profiles/search")
+def natural_language_search(
+    q: str = Query(None),
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=50),
+    db: Session = Depends(get_db)
+):
+    if not q or q.strip() == "":
+        return JSONResponse(
+            status_code=400,
+            content={"status": "error", "message": "Invalid query parameters"}
+        )
+
+    query = db.query(Profile)
+    text = q.lower().strip()
+    interpreted = False
+
+    # Gender
+    if "female" in text:
+        query = query.filter(func.lower(Profile.gender) == "female")
+        interpreted = True
+    elif "male" in text:
+        query = query.filter(func.lower(Profile.gender) == "male")
+        interpreted = True
+
+    # Age groups
+    if "young" in text:
+        query = query.filter(Profile.age >= 16, Profile.age <= 24)
+        interpreted = True
+
+    if "child" in text:
+        query = query.filter(Profile.age_group == "child")
+        interpreted = True
+
+    if "teenager" in text:
+        query = query.filter(Profile.age_group == "teenager")
+        interpreted = True
+
+    if "adult" in text:
+        query = query.filter(Profile.age_group == "adult")
+        interpreted = True
+
+    if "senior" in text:
+        query = query.filter(Profile.age_group == "senior")
+        interpreted = True
+
+    # Numeric parsing
+    age_match = re.search(r'(above|over|below|under|at)\s+(\d+)', text)
+    if age_match:
+        condition, value = age_match.groups()
+        value = int(value)
+
+        if condition in ["above", "over"]:
+            query = query.filter(Profile.age > value)
+        elif condition in ["below", "under"]:
+            query = query.filter(Profile.age < value)
+        elif condition == "at":
+            query = query.filter(Profile.age == value)
+
+        interpreted = True
+
+    # Country
+    for country_name, code in COUNTRY_MAP.items():
+        if country_name in text:
+            query = query.filter(Profile.country_id == code)
+            interpreted = True
+            break
+
+    if not interpreted:
+        return JSONResponse(
+            status_code=422,
+            content={"status": "error", "message": "Unable to interpret query"}
+        )
+
+    total = query.count()
+    skip = (page - 1) * limit
+    results = query.offset(skip).limit(limit).all()
+
+    return {
+        "status": "success",
+        "page": page,
+        "limit": limit,
+        "total": total,
+        # "data": results
+        "data": [ProfileResponse.model_validate(p) for p in results]
+    }
+
+
+# -----------------------------
+# GET /api/profiles{id}
+# -----------------------------
 @app.get("/api/profiles/{id}")
 def get_profile(id: str, db: Session = Depends(get_db)):
     profile = db.query(Profile).filter(Profile.id == id).first()
@@ -162,36 +328,8 @@ def get_profile(id: str, db: Session = Depends(get_db)):
 
     return {
         "status": "success",
+    #   "data": profile
         "data": ProfileResponse.model_validate(profile)
-    }
-
-# -----------------------------
-# GET /api/profiles
-# -----------------------------
-@app.get("/api/profiles")
-def list_profiles(
-    gender: str | None = None,
-    country_id: str | None = None,
-    age_group: str | None = None,
-    db: Session = Depends(get_db)
-):
-    query = db.query(Profile)
-
-    if gender:
-        query = query.filter(func.lower(Profile.gender) == gender.lower())
-
-    if country_id:
-        query = query.filter(func.lower(Profile.country_id) == country_id.lower())
-
-    if age_group:
-        query = query.filter(func.lower(Profile.age_group) == age_group.lower())
-
-    results = query.all()
-
-    return {
-        "status": "success",
-        "count": len(results),
-        "data": results
     }
 
 
