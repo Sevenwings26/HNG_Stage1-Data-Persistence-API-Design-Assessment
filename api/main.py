@@ -7,8 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from contextlib import asynccontextmanager
-from database import get_db, Profile
-from schema import ProfileResponse, ProfileRequest
+from api.database import get_db, Profile
+from api.schema import ProfileResponse, ProfileRequest
 from fastapi import Query
 from sqlalchemy import desc, asc
 
