@@ -160,7 +160,8 @@ def list_profiles(
     sort_by: str = "created_at",
     order: str = "desc",
     page: int = Query(1, ge=1),
-    limit: int = Query(10, ge=1, le=50),
+    # limit: int = Query(10, ge=1, le=50),  
+    limit: int = Query(None), # Manual capping 
     db: Session = Depends(get_db)
 ):
     query = db.query(Profile)
@@ -199,9 +200,29 @@ def list_profiles(
         query = query.order_by(desc(target_column))
 
     # 3. Pagination Logic
+    # total_records = query.count()
+    # skip = (page - 1) * limit
+    # results = query.offset(skip).limit(limit).all()
+    
+    actual_limit = 10
+    if limit is not None:
+        try:
+            actual_limit = int(limit)
+            if actual_limit > 50:
+                actual_limit = 50
+            if actual_limit < 1:
+                actual_limit = 1
+        except ValueError:
+            # If they send 'abc', it should technically be a 422, 
+            # but for robustness, we can default to 10.
+            actual_limit = 10
+
+    # 2. Re-calculate Skip using the "Actual" limit
     total_records = query.count()
-    skip = (page - 1) * limit
-    results = query.offset(skip).limit(limit).all()
+    skip = (page - 1) * actual_limit
+    
+    # 3. Apply to Query
+    results = query.offset(skip).limit(actual_limit).all()
 
     return {
         "status": "success",
