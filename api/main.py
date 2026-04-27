@@ -160,8 +160,8 @@ def list_profiles(
     sort_by: str = "created_at",
     order: str = "desc",
     page: int = Query(1, ge=1),
-    # limit: int = Query(10, ge=1, le=50),  
-    limit: int = Query(None), # Manual capping 
+    limit: int = Query(10, ge=1, le=50),  
+    # limit: int = Query(None), # Manual capping 
     db: Session = Depends(get_db)
 ):
     query = db.query(Profile)
@@ -186,40 +186,60 @@ def list_profiles(
 
     # 2. Sorting Logic
     # Map the user input string to the actual Database Columns
+    # allowed_sort_columns = {
+    #     "age": Profile.age,
+    #     "created_at": Profile.created_at,
+    #     "gender_probability": Profile.gender_probability
+    # }
+    
+    # target_column = allowed_sort_columns.get(sort_by, Profile.created_at)
+    
+    # if order.lower() == "asc":
+    #     query = query.order_by(asc(target_column))
+    # else:
+    #     query = query.order_by(desc(target_column))
+
     allowed_sort_columns = {
         "age": Profile.age,
         "created_at": Profile.created_at,
         "gender_probability": Profile.gender_probability
     }
-    
-    target_column = allowed_sort_columns.get(sort_by, Profile.created_at)
-    
+
+    if sort_by not in allowed_sort_columns:
+        raise HTTPException(status_code=400, detail="Invalid sort field")
+
+    target_column = allowed_sort_columns[sort_by]
+
     if order.lower() == "asc":
-        query = query.order_by(asc(target_column))
+        query = query.order_by(asc(target_column), asc(Profile.id))
     else:
-        query = query.order_by(desc(target_column))
+        query = query.order_by(desc(target_column), desc(Profile.id))
 
     # 3. Pagination Logic
     # total_records = query.count()
     # skip = (page - 1) * limit
     # results = query.offset(skip).limit(limit).all()
-    
-    actual_limit = 10
-    if limit is not None:
-        try:
-            actual_limit = int(limit)
-            if actual_limit > 50:
-                actual_limit = 50
-            if actual_limit < 1:
-                actual_limit = 1
-        except ValueError:
-            # If they send 'abc', it should technically be a 422, 
-            # but for robustness, we can default to 10.
-            actual_limit = 10
-
-    # 2. Re-calculate Skip using the "Actual" limit
     total_records = query.count()
-    skip = (page - 1) * actual_limit
+    skip = (page - 1) * limit
+    results = query.offset(skip).limit(limit).all()
+
+
+    # actual_limit = 10
+    # if limit is not None:
+    #     try:
+    #         actual_limit = int(limit)
+    #         if actual_limit > 50:
+    #             actual_limit = 50
+    #         if actual_limit < 1:
+    #             actual_limit = 1
+    #     except ValueError:
+    #         # If they send 'abc', it should technically be a 422, 
+    #         # but for robustness, we can default to 10.
+    #         actual_limit = 10
+
+    # # 2. Re-calculate Skip using the "Actual" limit
+    # total_records = query.count()
+    # skip = (page - 1) * actual_limit
     
     # 3. Apply to Query
     results = query.offset(skip).limit(actual_limit).all()
