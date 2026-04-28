@@ -9,7 +9,7 @@ from api.dependencies.rbac import require_admin, require_analyst
 from api.dependencies.versioning import require_api_version
 import os
 from api.database import get_db, Profile, User
-from api.schemas import ProfileRequest, ProfileResponse
+from api.schema import ProfileRequest, ProfileResponse
 
 router = APIRouter(
     dependencies=[Depends(require_api_version)]

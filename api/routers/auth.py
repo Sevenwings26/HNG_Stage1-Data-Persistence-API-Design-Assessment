@@ -67,9 +67,12 @@ async def github_callback(request: Request, db: Session = Depends(get_db)):
 
 
 from fastapi import HTTPException
-from jose import JWTError
+from jose import JWTError, jwt
+from api.database import RefreshToken, User
+from api.auth import SECRET, ALGO
 
-@app.post("/auth/refresh")
+
+@router.post("/auth/refresh")
 def refresh_token(payload: dict, db: Session = Depends(get_db)):
     token = payload.get("refresh_token")
 
@@ -115,7 +118,7 @@ def refresh_token(payload: dict, db: Session = Depends(get_db)):
     }
 
 
-@app.post("/auth/logout")
+@router.post("/auth/logout")
 def logout(payload: dict, db: Session = Depends(get_db)):
     token = payload.get("refresh_token")
 

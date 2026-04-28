@@ -8,7 +8,7 @@ import os
 from api.database import get_db, Profile, User
 from api.dependencies.rbac import require_admin, require_analyst
 from api.dependencies.versioning import require_api_version
-from api.schemas import ProfileRequest, ProfileResponse
+from api.schema import ProfileRequest, ProfileResponse
 
 # router 
 router = APIRouter(
