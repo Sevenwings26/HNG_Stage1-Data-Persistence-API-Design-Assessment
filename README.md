@@ -1,3 +1,28 @@
+Objective
+Upgrade the system into a secure, multi-interface platform.
+You will:
+Add authentication
+Introduce user roles (Role-based access control)
+Secure all endpoints
+Build a CLI tool
+Build a simple web portal
+Ensure consistency across all interfaces
+
+
+Client → /auth/github → GitHub (PKCE) 
+       ← redirect with code
+Client → /auth/github/callback → your API
+       → exchange code for access token
+       → fetch GitHub user
+       → create/find user
+       → issue access + refresh tokens
+
+python_jose for jwt
+Authlib - Oauth + Proof of Key for Code Exchange
+
+    
+
+
 # Stage 2: Intelligence Query Engine
 ## Stage 1 - Data Persistence & API Design Assessment (Improved)
 
